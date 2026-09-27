@@ -1,0 +1,11 @@
+{
+  "onTurn": [
+    { "collector": "game", "args": {}, "every": 1 },
+    { "collector": "cities", "args": {}, "every": 5 },
+    { "collector": "city", "args": {}, "every": 10 }
+  ],
+  "onCitySelect": [],
+  "onAgeEnd": [
+    { "collector": "city", "args": { "all": true } }
+  ]
+}

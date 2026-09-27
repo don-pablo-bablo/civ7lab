@@ -1,0 +1,11 @@
+{
+  "name": "the mod's tags reached the running game",
+  "note": "The cheapest possible sanity check, and the one that separates 'my rule is wrong' from 'my rule never loaded'. Change the prefix to your own mod's.",
+  "collect": [
+    { "as": "tags", "collector": "tags", "args": { "prefix": "C69_", "limit": 5 } }
+  ],
+  "expect": [
+    { "path": "tags.count", "op": ">", "value": 0,
+      "why": "no tags means the SQL did not apply in this age, whatever Database.log says" }
+  ]
+}

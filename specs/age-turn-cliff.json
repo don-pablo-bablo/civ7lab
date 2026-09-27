@@ -1,0 +1,18 @@
+{
+  "name": "the age turn, measured on FranklinAnt44",
+  "note": "Run against the Antiquity side, then again after one autoplay turn. The Antiquity figures are the measurement of 21 September 2026: tile (20,7) reads 36 science, of which Great Works are 10 and the C69 Science Quarter is 2. In Exploration the same tile reads 13 and getGreatWorkBuildings no longer lists Library or Academy at all. Point --snapshot at either side.",
+  "collect": [
+    { "as": "tile", "collector": "tile", "args": { "x": 20, "y": 7 } },
+    { "as": "works", "collector": "greatworks", "args": { "name": "Pataliputra" } },
+    { "as": "city", "collector": "city", "args": { "name": "Pataliputra" } }
+  ],
+  "expect": [
+    { "path": "tile.constructibles[type=BUILDING_LIBRARY]", "op": "present",
+      "why": "AGELESS should keep it standing through the age turn; if it is gone, the mod broke rather than the yields" },
+    { "path": "tile.constructibles[type=BUILDING_ACADEMY]", "op": "present" },
+    { "path": "works[0].buildings[building=BUILDING_LIBRARY]", "op": "present",
+      "why": "this is the cliff itself: in Exploration the engine drops Library and Academy from the Great Work buildings, so this expectation FAILS on the far side and that failure is the finding" },
+    { "path": "tile.yields.YIELD_SCIENCE", "op": ">=", "value": 30,
+      "why": "36 in Antiquity, 13 in Exploration" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "onTurn": [
+    { "collector": "game", "args": {}, "every": 1 },
+    { "collector": "city", "args": { "all": true }, "every": 1 }
+  ],
+  "onAgeEnd": [
+    { "collector": "city", "args": { "all": true } },
+    { "collector": "greatworks", "args": {} },
+    { "collector": "yieldtree", "args": { "yield": "YIELD_SCIENCE" } }
+  ]
+}

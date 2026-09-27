@@ -1,0 +1,17 @@
+{
+  "name": "a tile's science did not fall off a cliff",
+  "note": "Point this at a save either side of a change and run it twice. The numbers are examples: edit them to whatever the measurement said last time, and the spec becomes a regression test for that measurement.",
+  "collect": [
+    { "as": "tile", "collector": "tile", "args": { "x": 20, "y": 7 } },
+    { "as": "works", "collector": "greatworks", "args": {} }
+  ],
+  "expect": [
+    { "path": "tile.yields.YIELD_SCIENCE", "op": ">=", "value": 30,
+      "why": "36 on Antiquity turn 44; anything near 13 means the age-turn cliff is back" },
+    { "path": "tile.constructibles[type=BUILDING_LIBRARY]", "op": "present",
+      "why": "the measurement is meaningless if the building is not there" },
+    { "path": "tile.constructibles[type=BUILDING_LIBRARY].damaged", "op": "==", "value": false },
+    { "path": "works[0].buildings", "op": "present",
+      "why": "in Exploration this list loses Library and Academy, which is the cliff itself" }
+  ]
+}
