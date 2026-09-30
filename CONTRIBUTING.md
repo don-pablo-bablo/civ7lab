@@ -17,6 +17,7 @@ from inside.
 | `civ7lab/runner.py`, `appoptions.py` | unattended runs and the game's switches |
 | `civ7lab/check.py`, `diff.py` | specs and snapshot diffs |
 | `civ7lab/mock.py`, `mock/panel.html` | the browser mock and its fixtures |
+| `civ7lab/workshop.py` | `workshop tags`, over Steam's flat API |
 | `mod/civ7lab-probe/` | the probe mod: it only reads and prints |
 | `.../ui/lab-core.js` | the collector registry and the log record writer |
 | `.../ui/lab-collect.js` | the collectors |
@@ -109,6 +110,9 @@ is reported instead of parsed; the DevTools client, including fragmented
 replies and events arriving mid-request; the SQL harness and modinfo reader;
 the script checker, snapshot diff and spec runner. The SQL harness was also run
 against a real mod and the game's own dump.
+
+`workshop tags`, 30 Sep 2026: Mod, UI submitted to a live item as app
+3688890 gave `OK`, and the web API read `Mod, UI` back straight away.
 
 Measured and not working: `UIFileWatcher 1` did not reload a mod's UI script
 within 45 seconds of an edit. It may watch only the game's own files, or not

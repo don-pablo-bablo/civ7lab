@@ -168,6 +168,28 @@ last reading of each case; any dotted fields of the data work.
 Icons show as coloured discs, because `blp:` is the engine's own protocol.
 Check icon art in the game.
 
+## Workshop: set an item's tags
+
+```bash
+python3 -m civ7lab workshop tags ITEM_ID                 # show them
+python3 -m civ7lab workshop tags ITEM_ID UI --dry-run    # now and new
+python3 -m civ7lab workshop tags ITEM_ID "Game Setup" "Gameplay Tweaks"
+```
+
+Under Proton, the SDK's Workshop Uploader will not tick its tag checkboxes,
+and Steam's web page has no tag editor for this game. This command does what
+the uploader does on upload, and nothing else: it replaces the tag list and
+leaves the title, description, content and visibility as they are.
+
+The list you give is the whole new list. Mod is always kept, since without it
+the item leaves the Mod filter. Names outside the uploader's lists are refused;
+case does not matter. A submit changes a public page, so dry-run first.
+
+It needs Steam running and logged on as the item's creator. It loads the Steam
+runtime's `libsteam_api.so` and runs as the SDK's app, 3688890, as the uploader
+does, falling back to the game's, 1295660. Afterwards it reads the tags back
+from Steam's public web API, which can lag a minute behind.
+
 ## Requirements
 
 - Python 3.10 or newer. The DevTools client uses only the standard library.

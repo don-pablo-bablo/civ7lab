@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import appoptions, cdp, check, diff, doctor, hotswap, jscheck, live, logs, mock, mod
 from . import modinfo
-from . import paths, records, runner, sqlcheck
+from . import paths, records, runner, sqlcheck, workshop
 
 
 def _print_json(value) -> None:
@@ -402,6 +402,60 @@ def cmd_check(args) -> int:
 
 
 # --------------------------------------------------------------------------
+# workshop
+# --------------------------------------------------------------------------
+
+def cmd_workshop(args) -> int:
+    item = workshop.details(args.item)
+    if item.consumer_app_id != workshop.CONSUMER_APP_ID:
+        print(f"item {item.id} is for app {item.consumer_app_id}, not Civ VII")
+        return 1
+    if not args.tags:
+        if args.json:
+            _print_json(item.__dict__)
+            return 0
+        print(f"{item.title} ({item.id})")
+        print("  tags: " + (", ".join(item.tags) or "none"))
+        return 0
+    tags = workshop.resolve_tags(args.tags)
+    dropped = [tag for tag in item.tags if tag not in tags]
+    report = {"item": item.id, "title": item.title, "now": item.tags,
+              "new": tags, "dropped": dropped}
+    if not args.json:
+        print(f"{item.title} ({item.id})")
+        print("  now: " + (", ".join(item.tags) or "none"))
+        print("  new: " + ", ".join(tags))
+        if dropped:
+            print("  dropped: " + ", ".join(dropped))
+    if args.dry_run:
+        if args.json:
+            _print_json(report)
+        else:
+            print("dry run: nothing submitted")
+        return 0
+    submitted = workshop.submit(item, tags)
+    report["attempts"] = [{"app_id": a, "result": r} for a, r in submitted.attempts]
+    if not args.json:
+        for app_id, outcome in submitted.attempts:
+            print(f"  submit as app {app_id}: {outcome}")
+    if not submitted.ok:
+        if args.json:
+            _print_json(report)
+        return 1
+    after = workshop.read_back(item.id, tags)
+    report["read_back"] = after.tags
+    matched = sorted(after.tags) == sorted(tags)
+    if args.json:
+        _print_json(report)
+    else:
+        print("  read back: " + (", ".join(after.tags) or "none"))
+        if not matched:
+            print("  the web API does not show the new tags yet; it can lag. "
+                  f"Check again with: civ7lab workshop tags {item.id}")
+    return 0 if matched else 1
+
+
+# --------------------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -541,6 +595,18 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--port", type=int)
     check_parser.set_defaults(func=cmd_check)
 
+    workshop_parser = sub.add_parser("workshop", help="set the tags on a Workshop item you own")
+    workshop_parser.add_argument("action", choices=["tags"])
+    workshop_parser.add_argument("item", help="the Workshop item ID")
+    workshop_parser.add_argument("tags", nargs="*",
+                                 help="the full new tag list; Mod is always kept. "
+                                      "Quote names with spaces, or separate with commas. "
+                                      "None: show the current tags")
+    workshop_parser.add_argument("--dry-run", action="store_true",
+                                 help="show the current and new tags without submitting")
+    workshop_parser.add_argument("--json", action="store_true")
+    workshop_parser.set_defaults(func=cmd_workshop)
+
     return parser
 
 
@@ -549,7 +615,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (cdp.CDPError, FileNotFoundError) as error:
+    except (cdp.CDPError, workshop.WorkshopError, FileNotFoundError) as error:
         print(f"civ7lab: {error}", file=sys.stderr)
         return 2
 

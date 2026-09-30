@@ -59,6 +59,19 @@ def steam_libraries() -> list[Path]:
     return found
 
 
+def steam_api_library() -> Path | None:
+    """The native Linux libsteam_api.so that ships with the Steam runtime.
+
+    `workshop` loads it to talk to the running Steam client, so no SDK
+    download is needed.
+    """
+    for root in steam_libraries():
+        candidate = root / "steamrt64/libsteam_api.so"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def install_dir() -> Path | None:
     """The game's install root: the directory holding Base/ and DLC/."""
     env = os.environ.get(ENV_INSTALL)
