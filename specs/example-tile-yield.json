@@ -1,0 +1,16 @@
+{
+  "name": "a tile's science held up",
+  "note": "Run it against a save before and after a change. The numbers are examples: set them to what the last measurement said, and the spec becomes a regression test for it.",
+  "collect": [
+    { "as": "tile", "collector": "tile", "args": { "x": 20, "y": 7 } },
+    { "as": "works", "collector": "greatworks", "args": {} }
+  ],
+  "expect": [
+    { "path": "tile.yields.YIELD_SCIENCE", "op": ">=", "value": 30,
+      "why": "36 when measured; a big drop means something broke" },
+    { "path": "tile.constructibles[type=BUILDING_LIBRARY]", "op": "present",
+      "why": "the rest means nothing if the building is not there" },
+    { "path": "tile.constructibles[type=BUILDING_LIBRARY].damaged", "op": "==", "value": false },
+    { "path": "works[0].buildings", "op": "present" }
+  ]
+}

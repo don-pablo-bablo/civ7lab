@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>civ7lab panel mock</title>
+<!--
+  Draws a mod's UI panel in a browser, from cases the game drew. See
+  docs/mock.md.
+
+  The mod keeps its drawing code in a file that calls no engine API and takes
+  plain data, and logs each case it draws as a record.
+
+  Usage:
+    civ7lab mock serve --root <mod dir> --renderer ui/panel.js --export render
+  then open the printed URL. Query parameters:
+    renderer=<path to the module>   export=<function name>   fixtures=<path to .js>
+  Icons show as coloured discs, because blp: is the engine's own protocol.
+  Check icon art in the game.
+-->
+<style>
+  :root {
+    --bg: #14100c; --panel: #1e1913; --ink: #f0e6d2; --muted: #b9a988;
+    --line: #3a3026; --accent: #c8a45c;
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: system-ui, "Segoe UI", sans-serif; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line);
+           display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .04em; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  main { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; align-items: flex-start; }
+  .case { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+          padding: 12px; min-width: 280px; }
+  .case > .label { color: var(--accent); font-size: 11px; text-transform: uppercase;
+                   letter-spacing: .08em; margin-bottom: 8px; }
+  .failed { color: #e08a7a; font-family: ui-monospace, monospace; font-size: 12px;
+            white-space: pre-wrap; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>civ7lab panel mock</h1>
+  <span class="meta" id="meta">loading…</span>
+</header>
+<main id="cases"></main>
+<script type="module">
+const parameters = new URLSearchParams(location.search);
+const rendererPath = parameters.get("renderer");
+const exportName = parameters.get("export") || "render";
+const fixturesPath = parameters.get("fixtures") || "./fixtures.js";
+
+const meta = document.getElementById("meta");
+const cases = document.getElementById("cases");
+
+function fail(text) {
+  meta.textContent = "failed";
+  const box = document.createElement("div");
+  box.className = "case failed";
+  box.textContent = text;
+  cases.append(box);
+}
+
+if (!rendererPath) {
+  fail("No renderer given. Add ?renderer=ui/your-panel.js to the URL, or start this\n"
+     + "page with: civ7lab mock serve --root <mod dir> --renderer ui/your-panel.js");
+} else {
+  try {
+    const [renderer, fixtures] = await Promise.all([
+      import(new URL(rendererPath, location.href).href),
+      import(new URL(fixturesPath, location.href).href).catch(() => ({ FIXTURES: [] })),
+    ]);
+    const draw = renderer[exportName] || renderer.default;
+    if (typeof draw !== "function") {
+      throw new Error(`${rendererPath} has no export "${exportName}" `
+                    + `(it exports: ${Object.keys(renderer).join(", ") || "nothing"})`);
+    }
+    const list = fixtures.FIXTURES || fixtures.default || [];
+    meta.textContent = `${rendererPath} · ${exportName}() · ${list.length} fixture(s)`;
+    if (!list.length) {
+      fail("No fixtures yet. Once the panel has logged some cases, run:\n"
+         + "  civ7lab mock fixtures --kind <record kind> --out <mod dir>/fixtures.js");
+    }
+    list.forEach((fixture, index) => {
+      const box = document.createElement("div");
+      box.className = "case";
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = fixture.label || fixture.name || `fixture ${index + 1}`;
+      box.append(label);
+      try {
+        const drawn = draw(fixture);
+        for (const part of Array.isArray(drawn) ? drawn : [drawn]) {
+          box.append(part instanceof Node ? part
+            : Object.assign(document.createElement("div"), { innerHTML: String(part) }));
+        }
+      } catch (error) {
+        const failure = document.createElement("div");
+        failure.className = "failed";
+        failure.textContent = String(error && error.stack ? error.stack : error);
+        box.append(failure);
+      }
+      cases.append(box);
+    });
+  } catch (error) {
+    fail(String(error && error.stack ? error.stack : error));
+  }
+}
+</script>
+</body>
+</html>

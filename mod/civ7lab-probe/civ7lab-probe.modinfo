@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- civ7lab's in-game half. It reads the game and prints; it changes no rule,
+     yield or definition, so it can stay enabled beside the mod under test.
+     AffectsSavedGames is 0, so adding or removing it does not affect a save.
+
+     Load order: lab-core installs the runtime, lab-collect registers the
+     collectors, lab-plan sets the recording plan and lab-hooks runs it. -->
+<Mod id="civ7lab-probe" version="1" xmlns="ModInfo">
+	<Properties>
+		<Name>civ7lab probe</Name>
+		<Description>Instrumentation for mod development: structured data out of the running game, over the log or the UI debugger.</Description>
+		<Authors>civ7lab</Authors>
+		<AffectsSavedGames>0</AffectsSavedGames>
+		<Package>Mod</Package>
+	</Properties>
+	<Dependencies>
+		<Mod id="base-standard" title="LOC_MODULE_BASE_STANDARD_NAME"/>
+	</Dependencies>
+	<ActionCriteria>
+		<Criteria id="always">
+			<AlwaysMet/>
+		</Criteria>
+	</ActionCriteria>
+	<ActionGroups>
+		<ActionGroup id="civ7lab-probe-ui" scope="game" criteria="always">
+			<!-- Load last, after every other mod's scripts. -->
+			<Properties>
+				<LoadOrder>2000</LoadOrder>
+			</Properties>
+			<Actions>
+				<UIScripts>
+					<Item>ui/lab-core.js</Item>
+					<Item>ui/lab-collect.js</Item>
+					<Item>ui/lab-plan.js</Item>
+					<Item>ui/lab-hooks.js</Item>
+				</UIScripts>
+			</Actions>
+		</ActionGroup>
+	</ActionGroups>
+</Mod>

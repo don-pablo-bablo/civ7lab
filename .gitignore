@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+# Unattended run output
+runs/
+# Harvested mock fixtures
+fixtures.js
+# AppOptions.txt backups
+*.civ7lab-*.bak
+# Link to the game's resources folder, for engine API lookups
+/reference
+.venv/
+.pytest_cache/
+.ruff_cache/
