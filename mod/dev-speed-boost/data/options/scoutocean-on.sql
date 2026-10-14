@@ -3,7 +3,7 @@
 INSERT INTO GameModifiers (ModifierId) VALUES ('DSB_SCOUT_OCEAN_ON');
 
 -- Exempt Scouts from the base game's ocean ban and embarkation types; see
--- SCOUT_OCEAN_EXEMPT in tools/build.py.
+-- SCOUT_OCEAN_EXEMPT in tools/dev_speed_boost.py.
 INSERT INTO Requirements (RequirementId, RequirementType, Inverse)
     VALUES ('DSB_REQ_NOT_SCOUT', 'REQUIREMENT_UNIT_TYPE_MATCHES', 1);
 INSERT INTO RequirementArguments (RequirementId, Name, Value)
