@@ -1,9 +1,11 @@
-"""`civ7lab workshop`: set the tags or description of a Steam Workshop item.
+"""`civ7lab workshop`: set the tags or description of a Steam Workshop item,
+or upload a new version of its mod.
 
 Under Proton, the SDK's Workshop Uploader will not tick its tag checkboxes,
 and Steam's web page has no tag editor for this game. This makes the same
-calls the uploader makes: StartItemUpdate, SetItemTags or SetItemDescription,
-then SubmitItemUpdate. Nothing else about the item changes.
+calls the uploader makes: StartItemUpdate, SetItemTags, SetItemDescription or
+SetItemContent, then SubmitItemUpdate with the release notes, if any. Nothing
+else about the item changes.
 
 Writing goes through the running Steam client, via Steam's API library and
 ctypes: see paths.steam_api_library. Reading goes through the public web API,
@@ -20,6 +22,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -128,6 +131,7 @@ class Item:
     consumer_app_id: int
     tags: list[str] = field(default_factory=list)
     description: str = ""
+    updated: int = 0  # Unix time of the last update
 
 
 def parse_details(payload: dict, item_id: str) -> Item:
@@ -142,6 +146,7 @@ def parse_details(payload: dict, item_id: str) -> Item:
         consumer_app_id=int(entry.get("consumer_app_id", 0)),
         tags=[t["tag"] for t in entry.get("tags", []) if "tag" in t],
         description=entry.get("description", ""),
+        updated=int(entry.get("time_updated", 0)),
     )
 
 
@@ -207,6 +212,11 @@ def _load(path: Path | None = None) -> ctypes.CDLL:
             ctypes.c_bool,
         ),
         "SteamAPI_ISteamUGC_SetItemDescription": ([ptr, u64, ctypes.c_char_p], ctypes.c_bool),
+        "SteamAPI_ISteamUGC_SetItemContent": ([ptr, u64, ctypes.c_char_p], ctypes.c_bool),
+        "SteamAPI_ISteamUGC_GetItemUpdateProgress": (
+            [ptr, u64, ctypes.POINTER(u64), ctypes.POINTER(u64)],
+            ctypes.c_int,
+        ),
         "SteamAPI_ISteamUGC_SubmitItemUpdate": ([ptr, u64, ctypes.c_char_p], u64),
         "SteamAPI_ISteamUtils_IsAPICallCompleted": (
             [ptr, u64, ctypes.POINTER(ctypes.c_bool)],
@@ -279,10 +289,15 @@ class Steam:
         item_id: str,
         tags: list[str] | None = None,
         description: str | None = None,
+        content: Path | None = None,
+        note: str | None = None,
         timeout: float = 120.0,
+        progress=None,
     ) -> str:
-        """Submit new tags, a new description, or both. Returns the EResult
-        name; "OK" means it took."""
+        """Submit new tags, a new description, new content, or any of them,
+        with `note` as the release notes. `progress(done, total)` hears the
+        upload's bytes while it runs. Returns the EResult name; "OK" means it
+        took."""
         handle = self.lib.SteamAPI_ISteamUGC_StartItemUpdate(
             self.ugc, CONSUMER_APP_ID, int(item_id)
         )
@@ -299,7 +314,14 @@ class Steam:
             self.ugc, handle, description.encode()
         ):
             return "SetItemDescription refused"
-        call = self.lib.SteamAPI_ISteamUGC_SubmitItemUpdate(self.ugc, handle, None)
+        # Steam wants an absolute path to a folder.
+        if content is not None and not self.lib.SteamAPI_ISteamUGC_SetItemContent(
+            self.ugc, handle, str(content.resolve()).encode()
+        ):
+            return "SetItemContent refused"
+        call = self.lib.SteamAPI_ISteamUGC_SubmitItemUpdate(
+            self.ugc, handle, note.encode() if note else None
+        )
         if call == 0:
             return "SubmitItemUpdate refused"
         failed = ctypes.c_bool(False)
@@ -310,6 +332,12 @@ class Steam:
             if time.monotonic() > deadline:
                 return f"no answer from Steam in {timeout:.0f}s"
             self.lib.SteamAPI_RunCallbacks()
+            if progress:
+                done, total = ctypes.c_uint64(0), ctypes.c_uint64(0)
+                self.lib.SteamAPI_ISteamUGC_GetItemUpdateProgress(
+                    self.ugc, handle, ctypes.byref(done), ctypes.byref(total)
+                )
+                progress(done.value, total.value)
             time.sleep(0.1)
         result = SubmitItemUpdateResult()
         if (
@@ -344,10 +372,14 @@ def submit(
     item: Item,
     tags: list[str] | None = None,
     description: str | None = None,
+    content: Path | None = None,
+    note: str | None = None,
     app_ids: tuple[int, ...] = (CREATOR_APP_ID, CONSUMER_APP_ID),
+    progress=None,
 ) -> Submitted:
-    """Replace the item's tags, description, or both. Tries the SDK's app ID
-    first, as the uploader does, and the game's if that fails."""
+    """Replace the item's tags, description or content, or any of them, with
+    `note` as the release notes. Tries the SDK's app ID first, as the
+    uploader does, and the game's if that fails."""
     attempts: list[tuple[int, str]] = []
     for app_id in app_ids:
         try:
@@ -358,7 +390,16 @@ def submit(
                         f"item {item.id} belongs to {item.creator}, "
                         f"and Steam is logged on as {owner}"
                     )
-                outcome = steam.update(item.id, tags=tags, description=description)
+                outcome = steam.update(
+                    item.id,
+                    tags=tags,
+                    description=description,
+                    content=content,
+                    note=note,
+                    # An upload takes as long as the files take to send.
+                    timeout=600.0 if content else 120.0,
+                    progress=progress,
+                )
         except WorkshopError as error:
             if "belongs to" in str(error) or "not logged on" in str(error):
                 raise
@@ -369,8 +410,46 @@ def submit(
     return Submitted(None, attempts)
 
 
-# Steam's limit on a description, in characters.
+# Steam's limit on a description, in characters. Release notes share it.
 DESCRIPTION_LIMIT = 8000
+
+
+@dataclass
+class ModFolder:
+    path: Path
+    modinfo: Path
+    id: str
+    version: str
+    files: list[Path]
+
+    @property
+    def size(self) -> int:
+        return sum(f.stat().st_size for f in self.files)
+
+
+def mod_folder(path: Path) -> ModFolder:
+    """The mod in `path`, checked as the game will read it once subscribed:
+    the item's root is the mod's own folder, so its .modinfo sits at the top.
+    A version starting with 0 makes the game list the mod but never load it."""
+    if not path.is_dir():
+        raise WorkshopError(f"{path} is not a folder")
+    found = sorted(path.glob("*.modinfo"))
+    if len(found) != 1:
+        raise WorkshopError(
+            f"{path} has {len(found)} .modinfo files at its top; a mod's folder has one"
+        )
+    try:
+        root = ET.parse(found[0]).getroot()
+    except ET.ParseError as error:
+        raise WorkshopError(f"{found[0].name} does not parse: {error}") from error
+    version = root.get("version", "")
+    if not version or version.startswith("0"):
+        raise WorkshopError(
+            f"{found[0].name} has version {version or 'none'}; "
+            "the game lists a mod whose version starts with 0 but never loads it"
+        )
+    files = sorted(f for f in path.rglob("*") if f.is_file())
+    return ModFolder(path, found[0], root.get("id", ""), version, files)
 
 
 def same_text(a: str, b: str) -> bool:

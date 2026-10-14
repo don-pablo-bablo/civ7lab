@@ -132,3 +132,104 @@ def test_a_description_over_steams_limit_is_refused(monkeypatch, capsys, tmp_pat
     text.write_text("x" * (workshop.DESCRIPTION_LIMIT + 1), encoding="utf-8")
     assert commands.main(["workshop", "description", "1234567890", str(text)]) == 1
     assert "at most 8000" in capsys.readouterr().out
+
+
+def make_mod(folder, version="1.1.0"):
+    folder.mkdir()
+    (folder / "my-mod.modinfo").write_text(
+        f'<?xml version="1.0"?>\n<Mod id="my-mod" version="{version}" xmlns="ModInfo"/>\n',
+        encoding="utf-8",
+    )
+    (folder / "ui").mkdir()
+    (folder / "ui" / "panel.js").write_text("// panel\n", encoding="utf-8")
+    return folder
+
+
+def test_parse_details_reads_the_update_time():
+    reply = {
+        "response": {
+            "publishedfiledetails": [
+                {**REPLY["response"]["publishedfiledetails"][0], "time_updated": 1760400000}
+            ]
+        }
+    }
+    assert workshop.parse_details(reply, "1234567890").updated == 1760400000
+
+
+def test_a_mod_folder_is_read_from_its_modinfo(tmp_path):
+    mod = workshop.mod_folder(make_mod(tmp_path / "my-mod"))
+    assert (mod.id, mod.version) == ("my-mod", "1.1.0")
+    assert [f.name for f in mod.files] == ["my-mod.modinfo", "panel.js"]
+
+
+def test_a_mod_folder_with_a_version_starting_with_0_is_refused(tmp_path):
+    try:
+        workshop.mod_folder(make_mod(tmp_path / "my-mod", version="0.9.0"))
+    except workshop.WorkshopError as error:
+        assert "never loads it" in str(error)
+    else:
+        raise AssertionError("a 0.x version was accepted")
+
+
+def test_a_folder_without_a_modinfo_at_its_top_is_refused(tmp_path):
+    # The parent of a mod's folder: the game would not find the mod.
+    make_mod(tmp_path / "my-mod")
+    try:
+        workshop.mod_folder(tmp_path)
+    except workshop.WorkshopError as error:
+        assert "0 .modinfo files" in str(error)
+    else:
+        raise AssertionError("a folder without a .modinfo was accepted")
+
+
+def test_an_upload_dry_run_lists_the_files_and_notes_and_submits_nothing(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setattr(workshop, "details", item_with(""))
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("dry run submitted")
+
+    monkeypatch.setattr(workshop, "submit", refuse)
+    folder = make_mod(tmp_path / "my-mod")
+    note = tmp_path / "notes.txt"
+    note.write_text("[list][*]New sizes[/list]\n", encoding="utf-8")
+    code = commands.main(
+        ["workshop", "upload", "1234567890", str(folder), "--note", str(note), "--dry-run"]
+    )
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "  mod: my-mod 1.1.0" in out
+    assert "    ui/panel.js" in out
+    assert "    [list][*]New sizes[/list]" in out
+    assert "dry run: nothing submitted" in out
+
+
+def test_an_upload_sends_the_folder_and_notes(monkeypatch, capsys, tmp_path):
+    times = iter([100, 200])
+
+    def details(item_id):
+        reply = {
+            "response": {
+                "publishedfiledetails": [
+                    {**REPLY["response"]["publishedfiledetails"][0], "time_updated": next(times)}
+                ]
+            }
+        }
+        return workshop.parse_details(reply, item_id)
+
+    sent = {}
+
+    def submit(item, **kwargs):
+        sent.update(kwargs)
+        return workshop.Submitted(workshop.CREATOR_APP_ID, [(workshop.CREATOR_APP_ID, "OK")])
+
+    monkeypatch.setattr(workshop, "details", details)
+    monkeypatch.setattr(workshop, "submit", submit)
+    folder = make_mod(tmp_path / "my-mod")
+    note = tmp_path / "notes.txt"
+    note.write_text("Fixes\n", encoding="utf-8")
+    code = commands.main(["workshop", "upload", "1234567890", str(folder), "--note", str(note)])
+    assert code == 0
+    assert sent["content"] == folder and sent["note"] == "Fixes"
+    assert "  read back: updated" in capsys.readouterr().out

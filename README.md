@@ -71,6 +71,7 @@ to finish. The tables below list single tasks.
 | [Lay out a panel in a browser instead of in game](docs/mock.md) | `civ7lab mock serve` |
 | [Set Workshop tags when the uploader will not](docs/workshop.md) | `civ7lab workshop tags ITEM TAGS` |
 | [Update a Workshop description from a file](docs/workshop.md#description) | `civ7lab workshop description ITEM FILE` |
+| [Upload a new version with release notes](docs/workshop.md#upload) | `civ7lab workshop upload ITEM FOLDER --note FILE` |
 
 [CONTRIBUTING.md](CONTRIBUTING.md#confirmed-in-game) lists what has been
 confirmed in a running game.

@@ -1,8 +1,9 @@
-# Workshop tags and description
+# Workshop tags, description and uploads
 
-`civ7lab workshop` changes a published item's tags or description, the way
-the SDK's Workshop Uploader does, and nothing else: the title, content and
-visibility stay as they are.
+`civ7lab workshop` changes a published item's tags or description, or uploads
+a new version of its mod with release notes, the way the SDK's Workshop
+Uploader does. Nothing else changes: the title, preview image and visibility
+stay as they are.
 
 ## Tags
 
@@ -35,6 +36,28 @@ if the two already match. Steam allows at most 8000 characters.
 
 This keeps the Workshop page in step with a `description.txt` kept in the
 mod's repository.
+
+## Upload
+
+```bash
+civ7lab workshop upload 1234567890 mod/my-mod --note notes.txt --dry-run
+civ7lab workshop upload 1234567890 mod/my-mod --note notes.txt
+```
+
+Uploads the folder as the item's new version, with the file's text as its
+release notes on the item's Change Notes page. The notes are in Steam's
+markup, at most 8000 characters. Without `--note` the version goes up with
+none.
+
+The folder is the mod's own: once subscribed, the game finds the mod by the
+`.modinfo` at the top of the item, so a folder without exactly one there is
+refused. So is a modinfo whose version starts with 0, which the game lists
+but never loads. Every file in the folder is uploaded, so the dry run lists
+them all.
+
+A dry run shows the mod's id and version, the files and the notes, and
+submits nothing. The upload shows its progress, then waits for the web API's
+update time to move.
 
 ## Requirements
 
