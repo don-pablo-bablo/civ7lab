@@ -233,3 +233,13 @@ def test_an_upload_sends_the_folder_and_notes(monkeypatch, capsys, tmp_path):
     assert code == 0
     assert sent["content"] == folder and sent["note"] == "Fixes"
     assert "  read back: updated" in capsys.readouterr().out
+
+
+def test_an_unreadable_note_is_refused(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(workshop, "details", item_with(""))
+    folder = make_mod(tmp_path / "my-mod")
+    note = tmp_path / "notes.txt"
+    note.write_bytes(b"\xff\xfe not text")
+    code = commands.main(["workshop", "upload", "1234567890", str(folder), "--note", str(note)])
+    assert code == 1
+    assert "cannot read the release notes" in capsys.readouterr().out

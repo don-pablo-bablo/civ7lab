@@ -118,7 +118,11 @@ def cmd_upload(args, item: workshop.Item) -> int:
     except workshop.WorkshopError as error:
         print(f"  {error}")
         return 1
-    note = Path(args.note).read_text(encoding="utf-8").strip() if args.note else ""
+    try:
+        note = Path(args.note).read_text(encoding="utf-8").strip() if args.note else ""
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"  cannot read the release notes in {args.note}: {error}")
+        return 1
     if len(note) > workshop.DESCRIPTION_LIMIT:
         print(
             f"  {args.note} has {len(note)} characters; Steam takes at most "
