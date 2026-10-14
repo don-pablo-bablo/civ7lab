@@ -140,9 +140,11 @@ def cmd_upload(args, item: workshop.Item) -> int:
         return 0
     shown = [-1]
 
+    # Steam's count drops back to 0 once the files are sent, while it
+    # commits the update, so only a rise is shown.
     def progress(done: int, total: int) -> None:
         percent = done * 100 // total if total else 0
-        if percent != shown[0]:
+        if percent > shown[0]:
             shown[0] = percent
             print(f"\r  uploading: {percent}%", end="", file=sys.stderr, flush=True)
 

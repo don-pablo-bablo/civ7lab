@@ -123,7 +123,8 @@ On Linux, against the Steam version, build 25516395:
 - **Comparing**: `check` and `diff`, against the game and against snapshots.
 - **Logs**: `errors`, `stamps`, `records` and `marker`.
 - **Mock**: `serve` and `fixtures`, with a real mod's panel.
-- **Workshop**: `tags` and `description`, on a published item.
+- **Workshop**: `tags`, `description` and `upload` with release notes, on a
+  published item.
 
 ## How the game behaves
 
