@@ -196,6 +196,5 @@ directly.
 - **Branch**: from `main`, with one change per pull request.
 - **Title**: write it as a commit message. Pull requests are squash-merged, so
   the title becomes the commit's subject line.
-- **Checks**: CI must pass on Linux and Windows before a merge. Greptile also
-  reviews each pull request.
+- **Checks**: CI must pass on Linux and Windows before a merge.
 - **Merging**: the maintainer merges.
