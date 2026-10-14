@@ -122,14 +122,20 @@ examples:
 examples:
   civ7lab mod list                      what is in Mods, and which links are broken
   civ7lab mod install                   link the civ7lab probe
+  civ7lab mod install dev-speed-boost   link Dev Speed Boost, which civ7lab ships
   civ7lab mod install path/to/my-mod    link your own mod, so edits need no copy
-  civ7lab mod uninstall my-mod          remove the link; the source is untouched""",
+  civ7lab mod uninstall dev-speed-boost remove the link; the source is untouched""",
     )
     parser.set_defaults(func=cmd_mod)
     act = actions(parser)
     act.add_parser("list", help="list the installed mods and where each links to")
     install = act.add_parser("install", help="symlink or copy a mod into Mods")
-    install.add_argument("path", nargs="?", help="mod directory (default: the civ7lab probe)")
+    install.add_argument(
+        "path",
+        nargs="?",
+        help="mod directory, or the name of a mod civ7lab ships: civ7lab-probe "
+        "(the default) or dev-speed-boost",
+    )
     install.add_argument("--copy", action="store_true", help="copy instead of symlinking")
     install.add_argument(
         "--force", action="store_true", help="replace whatever is there under the same name"

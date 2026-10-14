@@ -14,6 +14,7 @@ from start to finish.
 | [mock.md](mock.md) | `mock` | laying out a panel in a browser from cases the game drew |
 | [workshop.md](workshop.md) | `workshop` | setting Steam Workshop tags and descriptions, and uploading a new version |
 | [probe.md](probe.md) | | the in-game half: its API, your own collectors, the record format |
+| [dev-speed-boost.md](dev-speed-boost.md) | `mod install dev-speed-boost` | the mod that speeds a test game up: its options, and changing them |
 
 Pick the cheapest route that answers the question: offline first, then live,
 then logs, then a full run.
