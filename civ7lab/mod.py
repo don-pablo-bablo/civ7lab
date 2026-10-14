@@ -14,7 +14,14 @@ from pathlib import Path
 
 from . import modinfo, paths
 
-PROBE_SOURCE = Path(__file__).resolve().parents[1] / "mod/civ7lab-probe"
+# The mods civ7lab ships, each a folder here: the probe, and Dev Speed Boost.
+BUNDLED = Path(__file__).resolve().parents[1] / "mod"
+PROBE_SOURCE = BUNDLED / "civ7lab-probe"
+
+
+def bundled() -> list[str]:
+    """The folder names of the mods civ7lab ships."""
+    return sorted(p.name for p in BUNDLED.iterdir() if any(p.glob("*.modinfo")))
 
 
 @dataclass
@@ -74,11 +81,17 @@ def installed() -> list[Installed]:
 
 
 def install(source: str | Path | None = None, link: bool = True, force: bool = False) -> str:
-    """Link or copy a mod folder into Mods. Defaults to the civ7lab probe."""
+    """Link or copy a mod folder into Mods. Defaults to the civ7lab probe. A
+    name that is not a folder, such as dev-speed-boost, is one of the mods
+    civ7lab ships."""
     source = Path(source) if source else PROBE_SOURCE
+    if not source.is_dir() and str(source) in bundled():
+        source = BUNDLED / str(source)
     source = source.resolve()
     if not source.is_dir():
-        raise FileNotFoundError(f"no such mod directory: {source}")
+        raise FileNotFoundError(
+            f"no such mod directory: {source}; civ7lab ships {', '.join(bundled())}"
+        )
     # The game ignores a folder with no modinfo without saying so.
     info = modinfo.load(source)
     game = paths.game()

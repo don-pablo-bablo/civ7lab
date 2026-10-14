@@ -57,6 +57,7 @@ to finish. The tables below list single tasks.
 
 | I want to | Command |
 |---|---|
+| [Speed a test game up: cheaper costs, shorter ages, starting gold](docs/dev-speed-boost.md) | `civ7lab mod install dev-speed-boost` |
 | [Open my newest save from the command line](docs/runs.md) | `civ7lab run --save latest --inspector` |
 | [Autoplay a seeded game and keep its logs](docs/runs.md#autoplay) | `civ7lab run --turns 40 --seed 1 --quit` |
 | [Find the error lines in the logs](docs/runs.md#logs) | `civ7lab logs errors` |

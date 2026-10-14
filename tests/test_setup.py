@@ -93,6 +93,21 @@ def test_install_links_and_uninstall_leaves_the_source(game, tmp_path):
     assert not link.exists() and source.is_dir()
 
 
+def test_a_mod_civ7lab_ships_installs_and_uninstalls_by_name(game, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert mod.install("dev-speed-boost").startswith("linked dev-speed-boost")
+    link = game.user / "Mods/dev-speed-boost"
+    assert link.resolve() == (mod.BUNDLED / "dev-speed-boost").resolve()
+    mod.uninstall("dev-speed-boost")
+    assert not link.exists() and (mod.BUNDLED / "dev-speed-boost").is_dir()
+
+
+def test_an_unknown_name_lists_the_mods_civ7lab_ships(game, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(FileNotFoundError, match="civ7lab ships civ7lab-probe, dev-speed-boost"):
+        mod.install("speed")
+
+
 def test_install_will_not_replace_another_mod_without_force(game, tmp_path):
     source = make_mod(tmp_path)
     (game.user / "Mods/my-mod").mkdir()

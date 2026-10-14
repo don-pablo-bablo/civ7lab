@@ -1,0 +1,3 @@
+-- Commander experience: +1000%. Attaches modifiers from modifiers-gameeffects.xml
+-- game-wide; their requirement limits them to human players.
+INSERT INTO GameModifiers (ModifierId) VALUES ('DSB_ATTACH_COMMANDER_XP_1000');

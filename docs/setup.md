@@ -64,6 +64,7 @@ junction instead, which needs neither.
 ```bash
 civ7lab mod install path/to/my-mod    # link your mod
 civ7lab mod install                   # link the civ7lab probe
+civ7lab mod install dev-speed-boost   # link Dev Speed Boost
 civ7lab mod list                      # what is there; flags broken links
 civ7lab mod uninstall my-mod          # remove the link, not the source
 ```
@@ -71,8 +72,13 @@ civ7lab mod uninstall my-mod          # remove the link, not the source
 `--copy` copies instead of linking. `--force` replaces whatever is already
 there under that name.
 
+civ7lab ships two mods, each found by its folder name: the probe and
+[Dev Speed Boost](dev-speed-boost.md). A name that is also a folder where you
+run the command means that folder.
+
 The probe only reads the game and prints; it changes no rules and does not
-affect saves. `live` does not need it installed. `run --plan` does.
+affect saves. `live` does not need it installed. `run --plan` does. Dev Speed
+Boost changes rules, so a save made with it on needs it to load.
 
 ## Environment variables
 

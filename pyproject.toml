@@ -38,3 +38,8 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "PLW1514"]
 # It is a preview rule, so preview is on for rules named here and no others.
 preview = true
 explicit-preview-rules = true
+
+[tool.ruff.lint.per-file-ignores]
+# The generator's templates are the mod's XML, tab-indented as the game's own
+# files are, and its option texts are long strings the game shows whole.
+"tools/dev_speed_boost.py" = ["E101", "E501"]
