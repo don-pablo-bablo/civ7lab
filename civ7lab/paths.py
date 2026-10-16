@@ -87,19 +87,19 @@ def steam_libraries() -> list[Path]:
 def steam_api_library() -> Path | None:
     """The Steam API library `workshop` loads to talk to the Steam client.
 
-    On Linux, the libsteam_api.so in the Steam runtime. On Windows, the
-    steam_api64.dll the game ships beside its executable. Neither needs an
+    On Linux, the libsteam_api.so in the Steam runtime, or else the one the
+    game ships beside its executable: Steam's update of 2026-10-15 removed the
+    runtime's. On Windows, the steam_api64.dll the game ships. None needs an
     SDK download.
     """
+    root = install_dir()
     if WINDOWS:
-        root = install_dir()
         candidate = root / "Base/Binaries/Win64/steam_api64.dll" if root else None
         return candidate if candidate and candidate.is_file() else None
-    for root in steam_libraries():
-        candidate = root / "steamrt64/libsteam_api.so"
-        if candidate.is_file():
-            return candidate
-    return None
+    candidates = [library / "steamrt64/libsteam_api.so" for library in steam_libraries()]
+    if root:
+        candidates.append(root / "Base/Binaries/linux/libsteam_api.so")
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
 def steam_overlay() -> Path | None:

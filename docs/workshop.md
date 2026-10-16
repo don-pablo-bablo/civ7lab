@@ -64,8 +64,10 @@ update time to move.
 - **Steam**: running, and logged on as the item's creator. The command checks
   and refuses otherwise.
 - **Steam's API library**: on Linux the Steam runtime's `libsteam_api.so`,
-  under the Steam folder's `steamrt64/`. On Windows the `steam_api64.dll` the
-  game ships in `Base\Binaries\Win64`. No SDK download is needed.
+  under the Steam folder's `steamrt64/`, or else the one the game ships in
+  `Base/Binaries/linux`, which Steam's update of 2026-10-15 left as the only
+  one. On Windows the `steam_api64.dll` the game ships in
+  `Base\Binaries\Win64`. No SDK download is needed.
 
 It submits as the SDK's app, 3688890, as the uploader does, and falls back to
 the game's, 1295660. Afterwards it reads the tags or description back from
