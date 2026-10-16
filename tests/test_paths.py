@@ -75,3 +75,31 @@ def test_a_second_steam_library_is_found(home, monkeypatch):
 
 def test_windows_library_paths_have_their_backslashes_undoubled():
     assert paths.vdf_path("D:\\\\SteamLibrary") == "D:\\SteamLibrary"
+
+
+def _steam_api(home, *where):
+    for relative in where:
+        (home / relative).parent.mkdir(parents=True, exist_ok=True)
+        (home / relative).write_bytes(b"")
+
+
+RUNTIME = "Steam/steamrt64/libsteam_api.so"
+SHIPPED = f"Steam/steamapps/common/{GAME}/Base/Binaries/linux/libsteam_api.so"
+
+
+def test_the_steam_runtimes_api_library_comes_first(home, monkeypatch):
+    monkeypatch.setattr(paths, "WINDOWS", False)
+    _steam_api(home, RUNTIME, SHIPPED)
+    assert paths.steam_api_library() == home / RUNTIME
+
+
+def test_without_the_runtimes_the_games_own_is_used(home, monkeypatch):
+    monkeypatch.setattr(paths, "WINDOWS", False)
+    _steam_api(home, SHIPPED)
+    assert paths.steam_api_library() == home / SHIPPED
+
+
+def test_with_neither_there_is_no_api_library(home, monkeypatch):
+    monkeypatch.setattr(paths, "WINDOWS", False)
+    (home / "Steam").mkdir()
+    assert paths.steam_api_library() is None

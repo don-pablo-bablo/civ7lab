@@ -3,6 +3,9 @@ reply, and a dry run. Nothing here talks to Steam or the network.
 """
 
 import ctypes
+import types
+
+import pytest
 
 from civ7lab import commands, workshop
 
@@ -243,3 +246,20 @@ def test_an_unreadable_note_is_refused(monkeypatch, capsys, tmp_path):
     code = commands.main(["workshop", "upload", "1234567890", str(folder), "--note", str(note)])
     assert code == 1
     assert "cannot read the release notes" in capsys.readouterr().out
+
+
+def test_an_interface_is_its_newest_version_in_the_library():
+    newer, older = object(), object()
+    lib = types.SimpleNamespace(SteamAPI_SteamUtils_v011=newer, SteamAPI_SteamUtils_v010=older)
+    assert workshop.interface(lib, "SteamAPI_SteamUtils", ("v011", "v010")) is newer
+
+
+def test_the_games_library_has_an_older_steam_utils():
+    older = object()
+    lib = types.SimpleNamespace(SteamAPI_SteamUtils_v010=older)
+    assert workshop.interface(lib, "SteamAPI_SteamUtils", ("v011", "v010")) is older
+
+
+def test_a_library_without_the_interface_is_refused():
+    with pytest.raises(workshop.WorkshopError, match="SteamAPI_SteamUGC"):
+        workshop.interface(types.SimpleNamespace(), "SteamAPI_SteamUGC", ("v021",))

@@ -184,6 +184,25 @@ class SubmitItemUpdateResult(ctypes.Structure):
 
 _library: ctypes.CDLL | None = None
 
+# The interfaces used, with the versions that have the calls made through
+# them, newest first. The Steam runtime's library has SteamUtils v011, the
+# one the game ships v010; the calls used are the same in both.
+INTERFACES = {
+    "SteamAPI_SteamUGC": ("v021",),
+    "SteamAPI_SteamUtils": ("v011", "v010"),
+    "SteamAPI_SteamUser": ("v023",),
+}
+
+
+def interface(lib, name: str, versions: tuple[str, ...]):
+    """The library's function for the first of an interface's versions it
+    has: SteamAPI_SteamUtils_v011, or else SteamAPI_SteamUtils_v010."""
+    for version in versions:
+        function = getattr(lib, f"{name}_{version}", None)
+        if function is not None:
+            return function
+    raise WorkshopError(f"the Steam API library has no {name} of version {', '.join(versions)}")
+
 
 def _load(path: Path | None = None) -> ctypes.CDLL:
     global _library
@@ -197,13 +216,16 @@ def _load(path: Path | None = None) -> ctypes.CDLL:
         )
     lib = ctypes.CDLL(str(path))
     u64, u32, ptr = ctypes.c_uint64, ctypes.c_uint32, ctypes.c_void_p
+    # Each interface under the name of the first version the library has.
+    for name, versions in INTERFACES.items():
+        function = interface(lib, name, versions)
+        function.argtypes = []
+        function.restype = ptr
+        setattr(lib, name, function)
     signatures = {
         "SteamAPI_InitFlat": ([ctypes.c_char_p], ctypes.c_int),
         "SteamAPI_Shutdown": ([], None),
         "SteamAPI_RunCallbacks": ([], None),
-        "SteamAPI_SteamUGC_v021": ([], ptr),
-        "SteamAPI_SteamUtils_v011": ([], ptr),
-        "SteamAPI_SteamUser_v023": ([], ptr),
         "SteamAPI_ISteamUser_BLoggedOn": ([ptr], ctypes.c_bool),
         "SteamAPI_ISteamUser_GetSteamID": ([ptr], u64),
         "SteamAPI_ISteamUGC_StartItemUpdate": ([ptr, u32, u64], u64),
@@ -267,9 +289,9 @@ class Steam:
         if code != 0:
             text = message.value.decode(errors="replace") or INIT_RESULT.get(code, "")
             raise WorkshopError(f"Steam init as app {self.app_id} failed ({code}): {text}")
-        self.ugc = self.lib.SteamAPI_SteamUGC_v021()
-        self.utils = self.lib.SteamAPI_SteamUtils_v011()
-        self.user = self.lib.SteamAPI_SteamUser_v023()
+        self.ugc = self.lib.SteamAPI_SteamUGC()
+        self.utils = self.lib.SteamAPI_SteamUtils()
+        self.user = self.lib.SteamAPI_SteamUser()
         if not (self.ugc and self.utils and self.user):
             self.lib.SteamAPI_Shutdown()
             raise WorkshopError("Steam started but gave no UGC, utils or user interface")
