@@ -12,7 +12,7 @@ from start to finish.
 | [ui.md](ui.md) | `ui` | changing UI scripts in a running game on save |
 | [runs.md](runs.md) | `run`, `logs` | opening saves and autoplaying from the command line, recording plans, logs, build stamps |
 | [mock.md](mock.md) | `mock` | laying out a panel in a browser from cases the game drew |
-| [workshop.md](workshop.md) | `workshop` | setting Steam Workshop tags and descriptions, and uploading a new version |
+| [workshop.md](workshop.md) | `workshop` | setting Steam Workshop tags, descriptions and preview images, and uploading a new version |
 | [probe.md](probe.md) | | the in-game half: its API, your own collectors, the record format |
 | [dev-speed-boost.md](dev-speed-boost.md) | `mod install dev-speed-boost` | the mod that speeds a test game up: its options, and changing them |
 

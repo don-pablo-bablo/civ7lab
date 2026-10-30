@@ -125,8 +125,8 @@ On Linux, against the Steam version, build 25516395:
 - **Comparing**: `check` and `diff`, against the game and against snapshots.
 - **Logs**: `errors`, `stamps`, `records` and `marker`.
 - **Mock**: `serve` and `fixtures`, with a real mod's panel.
-- **Workshop**: `tags`, `description` and `upload` with release notes, on a
-  published item.
+- **Workshop**: `tags`, `description`, `upload` with release notes and
+  `preview`, on a published item.
 - **Dev Speed Boost**: every option, played while it was a Workshop mod.
 
 ## How the game behaves

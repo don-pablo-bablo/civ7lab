@@ -1,11 +1,12 @@
-"""`civ7lab workshop`: set the tags or description of a Steam Workshop item,
-or upload a new version of its mod.
+"""`civ7lab workshop`: set the tags, description or preview image of a Steam
+Workshop item, or upload a new version of its mod.
 
 Under Proton, the SDK's Workshop Uploader will not tick its tag checkboxes,
 and Steam's web page has no tag editor for this game. This makes the same
-calls the uploader makes: StartItemUpdate, SetItemTags, SetItemDescription or
-SetItemContent, then SubmitItemUpdate with the release notes, if any. Nothing
-else about the item changes.
+calls the uploader makes: StartItemUpdate, SetItemTags, SetItemDescription,
+SetItemPreview or SetItemContent, then SubmitItemUpdate with the release
+notes, if any. Nothing else about the item changes. Steam's web page cannot
+change the preview image either: it only edits the extra images.
 
 Writing goes through the running Steam client, via Steam's API library and
 ctypes: see paths.steam_api_library. Reading goes through the public web API,
@@ -132,6 +133,7 @@ class Item:
     tags: list[str] = field(default_factory=list)
     description: str = ""
     updated: int = 0  # Unix time of the last update
+    preview_url: str = ""
 
 
 def parse_details(payload: dict, item_id: str) -> Item:
@@ -147,6 +149,7 @@ def parse_details(payload: dict, item_id: str) -> Item:
         tags=[t["tag"] for t in entry.get("tags", []) if "tag" in t],
         description=entry.get("description", ""),
         updated=int(entry.get("time_updated", 0)),
+        preview_url=entry.get("preview_url", ""),
     )
 
 
@@ -235,6 +238,7 @@ def _load(path: Path | None = None) -> ctypes.CDLL:
         ),
         "SteamAPI_ISteamUGC_SetItemDescription": ([ptr, u64, ctypes.c_char_p], ctypes.c_bool),
         "SteamAPI_ISteamUGC_SetItemContent": ([ptr, u64, ctypes.c_char_p], ctypes.c_bool),
+        "SteamAPI_ISteamUGC_SetItemPreview": ([ptr, u64, ctypes.c_char_p], ctypes.c_bool),
         "SteamAPI_ISteamUGC_GetItemUpdateProgress": (
             [ptr, u64, ctypes.POINTER(u64), ctypes.POINTER(u64)],
             ctypes.c_int,
@@ -312,14 +316,15 @@ class Steam:
         tags: list[str] | None = None,
         description: str | None = None,
         content: Path | None = None,
+        preview: Path | None = None,
         note: str | None = None,
         timeout: float = 120.0,
         progress=None,
     ) -> str:
-        """Submit new tags, a new description, new content, or any of them,
-        with `note` as the release notes. `progress(done, total)` hears the
-        upload's bytes while it runs. Returns the EResult name; "OK" means it
-        took."""
+        """Submit new tags, a new description, new content, a new preview
+        image, or any of them, with `note` as the release notes.
+        `progress(done, total)` hears the upload's bytes while it runs.
+        Returns the EResult name; "OK" means it took."""
         handle = self.lib.SteamAPI_ISteamUGC_StartItemUpdate(
             self.ugc, CONSUMER_APP_ID, int(item_id)
         )
@@ -341,6 +346,10 @@ class Steam:
             self.ugc, handle, str(content.resolve()).encode()
         ):
             return "SetItemContent refused"
+        if preview is not None and not self.lib.SteamAPI_ISteamUGC_SetItemPreview(
+            self.ugc, handle, str(preview.resolve()).encode()
+        ):
+            return "SetItemPreview refused"
         call = self.lib.SteamAPI_ISteamUGC_SubmitItemUpdate(
             self.ugc, handle, note.encode() if note else None
         )
@@ -395,13 +404,14 @@ def submit(
     tags: list[str] | None = None,
     description: str | None = None,
     content: Path | None = None,
+    preview: Path | None = None,
     note: str | None = None,
     app_ids: tuple[int, ...] = (CREATOR_APP_ID, CONSUMER_APP_ID),
     progress=None,
 ) -> Submitted:
-    """Replace the item's tags, description or content, or any of them, with
-    `note` as the release notes. Tries the SDK's app ID first, as the
-    uploader does, and the game's if that fails."""
+    """Replace the item's tags, description, content or preview image, or any
+    of them, with `note` as the release notes. Tries the SDK's app ID first,
+    as the uploader does, and the game's if that fails."""
     attempts: list[tuple[int, str]] = []
     for app_id in app_ids:
         try:
@@ -417,6 +427,7 @@ def submit(
                     tags=tags,
                     description=description,
                     content=content,
+                    preview=preview,
                     note=note,
                     # An upload takes as long as the files take to send.
                     timeout=600.0 if content else 120.0,
@@ -472,6 +483,23 @@ def mod_folder(path: Path) -> ModFolder:
         )
     files = sorted(f for f in path.rglob("*") if f.is_file())
     return ModFolder(path, found[0], root.get("id", ""), version, files)
+
+
+# Steam's limit on a preview image, and the formats it shows.
+PREVIEW_LIMIT = 1024 * 1024
+PREVIEW_TYPES = (".jpg", ".jpeg", ".png", ".gif")
+
+
+def preview_image(path: Path) -> Path:
+    """`path`, checked as Steam will take it: a JPEG, PNG or GIF under 1 MB."""
+    if not path.is_file():
+        raise WorkshopError(f"{path} is not a file")
+    if path.suffix.lower() not in PREVIEW_TYPES:
+        raise WorkshopError(f"{path.name} is not a JPEG, PNG or GIF")
+    size = path.stat().st_size
+    if size >= PREVIEW_LIMIT:
+        raise WorkshopError(f"{path.name} is {size / 1024:.0f} KB; Steam takes under 1024 KB")
+    return path
 
 
 def same_text(a: str, b: str) -> bool:

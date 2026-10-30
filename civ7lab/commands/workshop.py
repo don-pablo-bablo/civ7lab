@@ -19,6 +19,8 @@ def cmd_workshop(args) -> int:
         return cmd_description(args, item)
     if args.action == "upload":
         return cmd_upload(args, item)
+    if args.action == "preview":
+        return cmd_preview(args, item)
     if not args.tags:
         if args.json:
             print_json(item.__dict__)
@@ -170,13 +172,43 @@ def cmd_upload(args, item: workshop.Item) -> int:
     return 0
 
 
+def cmd_preview(args, item: workshop.Item) -> int:
+    print(f"{item.title} ({item.id})")
+    try:
+        image = workshop.preview_image(Path(args.image))
+    except workshop.WorkshopError as error:
+        print(f"  {error}")
+        return 1
+    print(f"  now: {item.preview_url or 'none'}")
+    print(f"  new: {image}, {image.stat().st_size / 1024:.0f} KB")
+    if args.dry_run:
+        print("dry run: nothing submitted")
+        return 0
+    submitted = workshop.submit(item, preview=image)
+    for app_id, outcome in submitted.attempts:
+        print(f"  submit as app {app_id}: {outcome}")
+    if not submitted.ok:
+        return 1
+    # Steam serves each new preview from a new URL.
+    after = workshop.read_back(item.id, lambda now: now.preview_url != item.preview_url)
+    if after.preview_url == item.preview_url:
+        print(
+            "  the web API does not show the new preview yet; it can lag. Check the "
+            "item's page on Steam."
+        )
+        return 1
+    print(f"  read back: {after.preview_url}")
+    return 0
+
+
 def register(sub) -> None:
     parser = command(
         sub,
         "workshop",
         doc="workshop.md",
         examples="""
-Changes the tags, the description or the mod's files, and nothing else.
+Changes the tags, the description, the preview image or the mod's files, and
+nothing else.
 Needs Steam running and logged on as the item's creator. A submit changes a
 public page, so dry-run first.
 
@@ -185,7 +217,8 @@ examples:
   civ7lab workshop tags 1234567890 UI --dry-run             show now and new
   civ7lab workshop tags 1234567890 "Game Setup" "Gameplay Tweaks"
   civ7lab workshop description 1234567890 workshop/description.txt --dry-run
-  civ7lab workshop upload 1234567890 mod/my-mod --note notes.txt --dry-run""",
+  civ7lab workshop upload 1234567890 mod/my-mod --note notes.txt --dry-run
+  civ7lab workshop preview 1234567890 workshop/preview.jpg --dry-run""",
     )
     parser.set_defaults(func=cmd_workshop)
     act = actions(parser)
@@ -219,4 +252,11 @@ examples:
     upload.add_argument("--note", help="a file with the release notes, in Steam's markup")
     upload.add_argument(
         "--dry-run", action="store_true", help="show what would be uploaded without submitting"
+    )
+
+    preview = act.add_parser("preview", help="replace an item's preview image")
+    preview.add_argument("item", help="the Workshop item ID")
+    preview.add_argument("image", help="the new preview: a JPEG, PNG or GIF under 1 MB")
+    preview.add_argument(
+        "--dry-run", action="store_true", help="show the current and new preview without submitting"
     )
