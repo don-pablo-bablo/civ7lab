@@ -73,6 +73,7 @@ to finish. The tables below list single tasks.
 | [Set Workshop tags when the uploader will not](docs/workshop.md) | `civ7lab workshop tags ITEM TAGS` |
 | [Update a Workshop description from a file](docs/workshop.md#description) | `civ7lab workshop description ITEM FILE` |
 | [Upload a new version with release notes](docs/workshop.md#upload) | `civ7lab workshop upload ITEM FOLDER --note FILE` |
+| [Replace a Workshop preview image](docs/workshop.md#preview) | `civ7lab workshop preview ITEM IMAGE` |
 
 [CONTRIBUTING.md](CONTRIBUTING.md#confirmed-in-game) lists what has been
 confirmed in a running game.

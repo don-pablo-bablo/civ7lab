@@ -1,8 +1,8 @@
-# Workshop tags, description and uploads
+# Workshop tags, description, preview and uploads
 
-`civ7lab workshop` changes a published item's tags or description, or uploads
-a new version of its mod with release notes, the way the SDK's Workshop
-Uploader does. Nothing else changes: the title, preview image and visibility
+`civ7lab workshop` changes a published item's tags, description or preview
+image, or uploads a new version of its mod with release notes, the way the
+SDK's Workshop Uploader does. Nothing else changes: the title and visibility
 stay as they are.
 
 ## Tags
@@ -37,6 +37,19 @@ if the two already match. Steam allows at most 8000 characters.
 This keeps the Workshop page in step with a `description.txt` kept in the
 mod's repository.
 
+## Preview
+
+```bash
+civ7lab workshop preview 1234567890 workshop/preview.jpg --dry-run
+civ7lab workshop preview 1234567890 workshop/preview.jpg
+```
+
+Replaces the item's main preview image, the one shown in the Workshop's
+lists. Steam's web page cannot: its image editor only adds and removes the
+extra images in the gallery. Steam takes a JPEG, PNG or GIF under 1 MB, and
+anything else is refused before it is sent. The dry run shows the current
+preview's URL and the new file's size.
+
 ## Upload
 
 ```bash
@@ -70,5 +83,5 @@ update time to move.
   `Base\Binaries\Win64`. No SDK download is needed.
 
 It submits as the SDK's app, 3688890, as the uploader does, and falls back to
-the game's, 1295660. Afterwards it reads the tags or description back from
-Steam's public web API, which can lag a minute behind.
+the game's, 1295660. Afterwards it reads the tags, description or preview
+back from Steam's public web API, which can lag a minute behind.

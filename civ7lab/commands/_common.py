@@ -46,7 +46,7 @@ GROUPS = [
         "Other",
         [
             ("mock", "draw a mod's panel in a browser from saved cases"),
-            ("workshop", "set the tags or description of a Steam Workshop item"),
+            ("workshop", "set the tags, description or preview of a Steam Workshop item"),
         ],
     ),
 ]

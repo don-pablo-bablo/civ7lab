@@ -263,3 +263,78 @@ def test_the_games_library_has_an_older_steam_utils():
 def test_a_library_without_the_interface_is_refused():
     with pytest.raises(workshop.WorkshopError, match="SteamAPI_SteamUGC"):
         workshop.interface(types.SimpleNamespace(), "SteamAPI_SteamUGC", ("v021",))
+
+
+def test_parse_details_reads_the_preview_url():
+    reply = {
+        "response": {
+            "publishedfiledetails": [
+                {
+                    **REPLY["response"]["publishedfiledetails"][0],
+                    "preview_url": "https://images.steamusercontent.com/ugc/1/",
+                }
+            ]
+        }
+    }
+    assert workshop.parse_details(reply, "1234567890").preview_url.endswith("/ugc/1/")
+
+
+def test_a_preview_over_1_mb_is_refused(tmp_path):
+    image = tmp_path / "preview.jpg"
+    image.write_bytes(b"\0" * workshop.PREVIEW_LIMIT)
+    with pytest.raises(workshop.WorkshopError, match="under 1024 KB"):
+        workshop.preview_image(image)
+
+
+def test_a_preview_that_is_not_an_image_is_refused(tmp_path):
+    image = tmp_path / "preview.webp"
+    image.write_bytes(b"RIFF")
+    with pytest.raises(workshop.WorkshopError, match="not a JPEG, PNG or GIF"):
+        workshop.preview_image(image)
+
+
+def test_a_preview_dry_run_submits_nothing(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(workshop, "details", item_with(""))
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("dry run submitted")
+
+    monkeypatch.setattr(workshop, "submit", refuse)
+    image = tmp_path / "preview.jpg"
+    image.write_bytes(b"\xff\xd8 jpeg")
+    code = commands.main(["workshop", "preview", "1234567890", str(image), "--dry-run"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "  now: none" in out
+    assert "dry run: nothing submitted" in out
+
+
+def test_a_preview_sends_the_image_and_reads_back_its_new_url(monkeypatch, capsys, tmp_path):
+    urls = iter(
+        ["https://images.steamusercontent.com/ugc/1/", "https://images.steamusercontent.com/ugc/2/"]
+    )
+
+    def details(item_id):
+        reply = {
+            "response": {
+                "publishedfiledetails": [
+                    {**REPLY["response"]["publishedfiledetails"][0], "preview_url": next(urls)}
+                ]
+            }
+        }
+        return workshop.parse_details(reply, item_id)
+
+    sent = {}
+
+    def submit(item, **kwargs):
+        sent.update(kwargs)
+        return workshop.Submitted(workshop.CREATOR_APP_ID, [(workshop.CREATOR_APP_ID, "OK")])
+
+    monkeypatch.setattr(workshop, "details", details)
+    monkeypatch.setattr(workshop, "submit", submit)
+    image = tmp_path / "preview.jpg"
+    image.write_bytes(b"\xff\xd8 jpeg")
+    code = commands.main(["workshop", "preview", "1234567890", str(image)])
+    assert code == 0
+    assert sent == {"preview": image}
+    assert "  read back: https://images.steamusercontent.com/ugc/2/" in capsys.readouterr().out
